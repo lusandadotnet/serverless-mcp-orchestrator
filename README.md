@@ -175,7 +175,7 @@ serverless-mcp-orchestrator/
 ├── src/
 │   ├── EconomicDataService/                    # C# .NET 10 API
 │   │   └── Data/                   # EF Core DbContext
-│   └── IntelligenceLayer/          # Python Azure Functions
+│   └── McpOrchestractor/          # Python Azure Functions
 │       ├── server.py            # MCP protocol implementation
 ├── .gitignore                      # Strict secret exclusion
 └── azure.yaml                      # azd configuration
