@@ -2,7 +2,7 @@
 
 <h2>Overview</h2>
 
-A secure, cloud-native system designed to analyze South African Reserve Bank (SARB) mandates by connecting AI models to real-time economic data through a layered architecture. The solution implements a zero-secrets security model and fully automated infrastructure provisioning.
+This project is a Proof of Concept (PoC) exploring a cloud-native architecture to analyze South African Reserve Bank (SARB) mandates. It demonstrates how to connect AI models to real-time economic data through a layered architecture, experimenting with a zero-secrets security approach and automated infrastructure provisioning.
 
 <h2>Architecture</h2>
 
@@ -147,12 +147,6 @@ The system enables AI-powered analysis of South African Reserve Bank mandates by
 - Connection string injection at deployment time
 - Azure SQL firewall rules limiting access to Azure services only
 
-<h3>Recommended Enhancements</h3>
-
-- Azure Key Vault integration for API key rotation
-- Managed Identity authentication for SQL Database (removing connection strings entirely)
-- Azure Private Link for network isolation
-- Application Insights for security event monitoring
 
 <h2>Development Workflow</h2>
 
@@ -162,7 +156,6 @@ The system enables AI-powered analysis of South African Reserve Bank mandates by
 2. Configure local `appsettings.Development.json` (not committed to Git)
 3. Run database migrations: `dotnet ef database update`
 4. Start API: `dotnet run` in API project
-5. Start Functions: `func start` in Functions directory
 
 <h3>CI/CD Pipeline</h3>
 
@@ -180,25 +173,10 @@ serverless-mcp-orchestrator/
 │   ├── main.bicep                  # Main infrastructure definition
 │   └── modules/                    # Modular Bicep components
 ├── src/
-│   ├── DataApi/                    # C# .NET 10 API
-│   │   ├── Controllers/
-│   │   ├── Models/
+│   ├── EconomicDataService/                    # C# .NET 10 API
 │   │   └── Data/                   # EF Core DbContext
 │   └── IntelligenceLayer/          # Python Azure Functions
-│       ├── mcp_server/             # MCP protocol implementation
-│       └── func.py
+│       ├── server.py            # MCP protocol implementation
 ├── .gitignore                      # Strict secret exclusion
 └── azure.yaml                      # azd configuration
 ```
-
-<h2>License</h2>
-
-This project is licensed under the MIT License.
-
-<h2>Contributing</h2>
-
-Contributions are welcome. Please ensure all PRs:
-- Maintain the zero-secrets policy
-- Include updated Bicep templates for infrastructure changes
-- Pass all security checks (no secrets in code)
-- Include appropriate documentation updates
