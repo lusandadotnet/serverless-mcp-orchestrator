@@ -1,0 +1,10 @@
+name: serverless-mcp-orchestrator
+services:
+  api:
+    project: src/EconomicDataService
+    language: dotnet
+    host: appservice
+  mcp-server:
+    project: src/McpOrchestrator
+    language: python
+    host: function

@@ -1,0 +1,6 @@
+@EconomicDataService_HostAddress = http://localhost:5081
+
+GET {{EconomicDataService_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

@@ -1,0 +1,15 @@
+# .NET Core
+bin/
+obj/
+
+# Visual Studio / VS Code
+.vscode/
+.vs/
+
+# Security / Secrets
+**/appsettings.json
+**/appsettings.*.json
+.env
+
+# Azure Developer CLI
+.azure/
