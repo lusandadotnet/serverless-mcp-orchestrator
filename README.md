@@ -1,8 +1,19 @@
-# ZAR-Flow (serverless MCP orchestrator)
+# Serverless MCP Orchestrator (ZAR-Flow)
 
-Cross-platform pipeline: **ASP.NET Core 10** REST API (South African macro indicators) plus a **FastMCP** Python server (deployed to **Azure Functions**) that exposes agent tools to LLM clients over streamable HTTP.
+Proof of concept for a cloud-native stack that connects AI models to South African macro data: a **ASP.NET Core 10** REST API (Azure App Service, Azure SQL) plus a **FastMCP** Python layer on **Azure Functions** (streamable HTTP) for LLM tools.
 
-Infrastructure: **Azure SQL** (Basic), **Linux App Service** (API, .NET 10), **Python 3.11** on a **Consumption** Functions app, plus Storage, Log Analytics, and Application Insights (see [`infra/main.bicep`](infra/main.bicep)).
+## Overview
+
+This project explores connecting AI models to economic data through a layered architecture, with infrastructure defined in Bicep and deployed via the [Azure Developer CLI](https://learn.microsoft.com/azure/developer/azure-developer-cli/) (`azd`).
+
+## Architecture
+
+| Layer | Stack | Hosting | Role |
+|-------|--------|---------|------|
+| **Data** | C# (.NET 10), EF Core | Azure App Service | REST API and persistent storage in Azure SQL |
+| **Intelligence** | Python, MCP | Azure Functions | MCP tools over HTTP to the API |
+
+Infrastructure details: [`infra/main.bicep`](infra/main.bicep) (SQL Basic, Linux App Service, Consumption Functions, Storage, Log Analytics, Application Insights).
 
 ## Run locally
 
@@ -14,7 +25,7 @@ Infrastructure: **Azure SQL** (Basic), **Linux App Service** (API, .NET 10), **P
 
 ### Azure (deployed)
 
-Run **`azd show`** for the current **api** and **mcp-server** HTTPS bases and an Azure Portal link to the resource group. Host names include a unique suffix from your resource group; another environment will differ.
+Run **`azd show`** for the current **api** and **mcp-server** HTTPS bases and an Azure Portal link to the resource group. Host names include a unique suffix per resource group.
 
 Example bases (environment `sarb-orchestrator-99`):
 
@@ -39,33 +50,29 @@ In **Development** only, OpenAPI is mapped at `/openapi/v1.json` (see `Program.c
 
 ## Deploy to Azure
 
-Deployments use the [Azure Developer CLI](https://learn.microsoft.com/azure/developer/azure-developer-cli/) (`azd`) with [`azure.yaml`](azure.yaml).
+Deployments use [`azure.yaml`](azure.yaml) and `azd`.
 
 ### Prerequisites
 
-- Install [`azd`](https://learn.microsoft.com/azure/developer/azure-developer-cli/install-azd) and sign in: `azd auth login`
-- An Azure subscription with permission to create resource groups and the resources in [`infra/main.bicep`](infra/main.bicep)
+- Azure subscription with permissions to create the resources in [`infra/main.bicep`](infra/main.bicep)
+- [Azure Developer CLI](https://learn.microsoft.com/azure/developer/azure-developer-cli/install-azd) — `azd auth login`
+- .NET 10 SDK and Python 3.11+ for local builds
 
 ### First-time provision
 
 From the repository root:
 
-1. `azd init` if you do not yet have a local `azd` environment (pick an environment name you will reuse, for example `sarb-orchestrator-99`).
-2. Set the Bicep `adminPassword` parameter (SQL administrator password) before provisioning, for example:  
-   `azd env set adminPassword "<your-strong-password>"`
-3. Run `azd up` to create the resource group and deploy both **api** (App Service) and **mcp-server** (Functions).
+1. `azd init` if you do not yet have a local `azd` environment (choose a name you will reuse).
+2. Set the Bicep SQL administrator password: `azd env set adminPassword "<your-strong-password>"`
+3. Run **`azd up`** — provisions infrastructure, deploys the API and MCP Function app, and injects settings. EF Core migrations run on API startup against the deployed database.
 
-Entity Framework migrations run on API startup against the deployed database.
-
-### Deploy code only
-
-When infrastructure already exists, publish new builds:
+### Deploy application updates only
 
 ```bash
 azd deploy --no-prompt
 ```
 
-Show HTTPS endpoints and a portal link to the resource group:
+Show endpoints and portal link:
 
 ```bash
 azd show
@@ -73,21 +80,32 @@ azd show
 
 ### GitHub Actions
 
-The workflow [`.github/workflows/azure-dev.yml`](.github/workflows/azure-dev.yml) runs `azd deploy` on pushes to `main` and on **workflow_dispatch**.
+Workflow [`.github/workflows/azure-dev.yml`](.github/workflows/azure-dev.yml) runs `azd deploy` on push to `main` and **workflow_dispatch**. Set repository variable **`AZURE_ENV_NAME`** to your `azd` environment name, and secrets **`AZURE_CLIENT_ID`**, **`AZURE_TENANT_ID`**, **`AZURE_SUBSCRIPTION_ID`** for [azure/login](https://github.com/Azure/login) (OIDC).
 
-Configure the repository as follows:
+CI: [`.github/workflows/ci.yml`](.github/workflows/ci.yml) (`dotnet test`, `pytest`).
 
-| Item | Purpose |
-|------|---------|
-| Variable `AZURE_ENV_NAME` | Must match your `azd` environment name (the one in `.azure/config.json` / `azd env list`) |
-| Secrets `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID` | Used by [azure/login](https://github.com/Azure/login) for federated OIDC to Azure |
+### Security and configuration
+
+- No secrets committed: use `.gitignore`, user secrets locally, and `azd` / Key Vault references for deployment (see `infra` and environment config).
+- Connection strings for the API are applied via App Service settings from Bicep.
 
 ### Troubleshooting
 
-- **`403 Site Disabled` during API deploy** — Usually the **api** App Service is not accepting SCM traffic. In the [Azure Portal](https://portal.azure.com), open the web app and check **Overview → Status**. If it shows **Stopped**, click **Start** and retry `azd deploy`. If status is **QuotaExceeded** (or usage shows as exceeded), the **Free (F1) plan quota** for your subscription or region is full—you must **scale up** the App Service plan (for example to **B1** Basic), delete or stop other Free-tier apps in that region, or use another subscription. Until quota is resolved, zip deploy and the site will keep returning 403.
-- **`az` CLI vs `azd`** — `azd` has its own sign-in. The Azure CLI (`az webapp start`, etc.) requires a separate `az login` if you use it to manage apps.
+- **`403 Site Disabled` during API deploy** — Check the **api** App Service in the portal (**Overview → Status**). If **Stopped**, click **Start** and retry `azd deploy`. If **QuotaExceeded**, Free (F1) quota is exhausted in that region—**scale up** the plan (e.g. B1), reduce other Free-tier usage, or use another subscription.
+- **`az` vs `azd`** — `azd` uses its own login; the Azure CLI needs `az login` separately.
 
 ## Tests
 
 - `dotnet test`
 - `cd src/McpOrchestrator && pytest`
+
+## Project structure
+
+```
+serverless-mcp-orchestrator/
+├── infra/main.bicep          # Azure resources
+├── azure.yaml                # azd services
+├── src/EconomicDataService/  # .NET API
+├── src/McpOrchestrator/      # Python Functions + MCP
+└── src/EconomicDataService.Tests/
+```

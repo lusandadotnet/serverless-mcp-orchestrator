@@ -36,10 +36,9 @@ output sqlServerName string = sqlServer.properties.fullyQualifiedDomainName
 output databaseName string = sqlDatabase.name
 
 
-// --- NEW: App Service (The Web Server) ---
 param webAppName string = 'api-zarflow-${uniqueString(resourceGroup().id)}'
 
-// 1. The Server Farm (F1 Free Tier for Students)
+
 resource appServicePlan 'Microsoft.Web/serverfarms@2022-09-01' = {
   name: 'asp-zarflow'
   location: location
@@ -52,7 +51,7 @@ resource appServicePlan 'Microsoft.Web/serverfarms@2022-09-01' = {
   }
 }
 
-// 2. The Web App
+// 2. Web App
 resource webApp 'Microsoft.Web/sites@2022-09-01' = {
   name: webAppName
   location: location
@@ -75,7 +74,6 @@ output apiEndpoint string = 'https://${webApp.properties.defaultHostName}'
 
 
 
-// 1. Storage Account (Required for Azure Functions to store execution state)
 param storageAccountName string = 'stzarflow${uniqueString(resourceGroup().id)}'
 
 resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
@@ -87,7 +85,6 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
   kind: 'StorageV2'
 }
 
-// 2. Serverless Function Plan (Y1 Dynamic = Consumption/Serverless)
 resource functionPlan 'Microsoft.Web/serverfarms@2022-09-01' = {
   name: 'plan-mcp-function'
   location: location
@@ -100,7 +97,7 @@ resource functionPlan 'Microsoft.Web/serverfarms@2022-09-01' = {
   }
 }
 
-// 3. The Python Function App
+
 param functionAppName string = 'func-mcp-server-${uniqueString(resourceGroup().id)}'
 
 resource functionApp 'Microsoft.Web/sites@2022-09-01' = {
