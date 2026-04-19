@@ -1,4 +1,4 @@
-# Serverless MCP Orchestrator (ZAR-Flow)
+# Serverless MCP Orchestrator
 
 Proof of concept for a cloud-native stack that connects AI models to South African macro data: a **ASP.NET Core 10** REST API (Azure App Service, Azure SQL) plus a **FastMCP** Python layer on **Azure Functions** (streamable HTTP) for LLM tools.
 
