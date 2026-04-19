@@ -1,39 +1,65 @@
+"""pytest suite for ZAR-Flow MCP tools."""
+
+from __future__ import annotations
+
+import os
+
+import httpx
 import pytest
-import requests_mock
-from server import mcp, analyze_inflation_impact, get_exchange_rate
+import respx
 
-# 1. Test the Inflation Logic (The SARB Mandate Alignment)
-def test_analyze_inflation_impact_logic():
-    """Validates the calculation logic for price stability monitoring."""
-    
-    # Test case: Within SARB target (3-6%)
-    within_target = analyze_inflation_impact(current_cpi=5.3, threshold=6.0)
-    assert "WITHIN" in within_target 
-    
-    # Test case: Exceeding target
-    above_target = analyze_inflation_impact(current_cpi=7.2, threshold=6.0)
-    assert "ABOVE" in above_target 
+from server import (
+    analyze_inflation_impact,
+    get_exchange_rate,
+    http_app,
+    inflation_variance_vs_target,
+)
 
-# 2. Test the API Integration (The Data Layer Connection)
-def test_get_exchange_rate_tool():
-    """Ensures the MCP tool correctly parses data from the ASP.NET API."""
-    
-    with requests_mock.Mocker() as m:
-        # Mocking the C# API response defined in your roadmap 
-        m.get("https://your-api.azurewebsites.net/api/indicators", 
-              json={"ZAR_USD": 18.45, "Inflation": 5.3})
-        
-        # Call the tool logic directly
-        result = get_exchange_rate(base_currency="USD", target_currency="ZAR")
-        
-        assert "18.45" in result 
-        assert "ZAR" in result 
 
-# 3. Test for Agentic Tool Registration
-def test_mcp_tool_registration():
-    """Verifies that all roadmap tools are correctly registered with FastMCP."""
-    registered_tools = [tool.name for tool in mcp.list_tools()]
-    
-    assert "get_exchange_rate" in registered_tools 
-    assert "analyze_inflation_impact" in registered_tools 
-    assert "summarize_economic_news" in registered_tools
+def test_analyze_inflation_impact_within_band() -> None:
+    text = analyze_inflation_impact(5.3)
+    assert "WITHIN MANDATE" in text
+
+
+def test_analyze_inflation_impact_above_band() -> None:
+    text = analyze_inflation_impact(7.2)
+    assert "ABOVE" in text
+
+
+def test_analyze_inflation_impact_below_band() -> None:
+    text = analyze_inflation_impact(2.1)
+    assert "BELOW" in text
+
+
+def test_inflation_variance_vs_target() -> None:
+    text = inflation_variance_vs_target(5.3, 4.5)
+    assert "0.8" in text or "+0.8" in text
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_get_exchange_rate_reads_summary_json() -> None:
+    os.environ["API_BASE_URL"] = "https://example.test"
+    respx.get("https://example.test/api/v1/indicators/summary").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "zarUsd": 18.45,
+                "cpiYearOnYear": 5.3,
+                "withinSarbBand": True,
+                "status": "Live from Azure SQL",
+            },
+        )
+    )
+
+    out = await get_exchange_rate("USD", "ZAR")
+    assert "18.45" in out
+    assert "ZAR" in out
+
+
+@pytest.mark.asyncio
+async def test_mcp_http_app_exposes_mcp_path() -> None:
+    transport = httpx.ASGITransport(app=http_app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        r = await client.get("/mcp")
+        assert r.status_code in (200, 400, 405, 406)

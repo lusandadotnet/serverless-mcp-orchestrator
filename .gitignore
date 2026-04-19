@@ -1,0 +1,27 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+[Dd]ebug/
+[Rr]elease/
+publish/
+
+## Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+*.egg-info/
+
+## Azure / secrets
+local.settings.json
+.azure/**/.env
+**/appsettings.*.local.json
+
+## IDE
+.idea/
+.vs/
