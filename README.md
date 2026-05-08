@@ -69,4 +69,4 @@ The core .NET service exposes the following endpoints for macro data operations:
 | **POST** | `/api/v1/inflation/readings` | Ingests new inflation data. |
 
 > **Note:** > * **Legacy route:** `GET /api/indicators` maps to the same summary as `/api/v1/indicators/summary`.
-> * **OpenAPI/Swagger:** In the `Development` environment only, the OpenAPI specification is mapped at `/openapi/v1.json` (refer to `Program.cs` for implementation details).
+> * **OpenAPI/Swagger:** In the `Development` environment only, the OpenAPI specification is mapped at `/openapi/v1.json` (refer to `Program.cs` for implementation details)
